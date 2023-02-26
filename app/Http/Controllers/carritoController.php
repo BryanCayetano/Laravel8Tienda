@@ -7,18 +7,18 @@ use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class CarritoController extends Controller
+class carritoController extends Controller
 {
     public function agregarProducto(Request $request)
     {
         // Validar los datos enviados
         $request->validate([
-            'id_producto' => 'required',
+            'id' => 'required',
             'stock' => 'required|numeric|min:1'
         ]);
 
         // Buscar el producto en la base de datos
-        $producto = Producto::find($request->id_producto);
+        $producto = Producto::find($request->id);
 
         // Si el producto no existe, retornar un error
         if (!$producto) {
@@ -43,7 +43,7 @@ class CarritoController extends Controller
 
         // Obtener la cantidad actual del producto en el carrito
         $cantidadActual = $carrito->productos()
-            ->where('id_producto', $producto->id_producto)
+            ->where('id', $producto->id)
             ->value('cantidad');
 
         // Calcular la nueva cantidad del producto en el carrito
@@ -52,11 +52,11 @@ class CarritoController extends Controller
         // Si el producto ya estaba en el carrito, actualizar su cantidad
         if ($cantidadActual) {
             $carrito->productos()->updateExistingPivot(
-                $producto->id_producto,
+                $producto->id,
                 ['cantidad' => $nuevaCantidad]
             );
         } else { // Si el producto no estaba en el carrito, agregarlo
-            $carrito->productos()->attach($producto->id_producto, [
+            $carrito->productos()->attach($producto->id, [
                 'cantidad' => $nuevaCantidad,
                 'precio' => $producto->precio
             ]);
@@ -75,7 +75,7 @@ class CarritoController extends Controller
     {
         // Validar los datos enviados
         $request->validate([
-            'id_producto' => 'required'
+            'id' => 'required'
         ]);
 
         // Obtener el usuario autenticado y su carrito asociado
@@ -90,7 +90,7 @@ class CarritoController extends Controller
         }
 
         // Buscar el producto en el carrito
-        $producto = $carrito->productos()->find($request->id_producto);
+        $producto = $carrito->productos()->find($request->id);
 
         // Si el producto no está en el carrito, retornar un error
         if (!$producto) {
@@ -100,7 +100,7 @@ class CarritoController extends Controller
         }
 
         // Eliminar el producto del carrito
-        $carrito->productos()->detach($producto->id_producto);
+        $carrito->productos()->detach($producto->id);
 
         // Incrementar el stock del producto en la base de datos
         $producto->increment('stock', $producto->pivot->cantidad);
@@ -136,5 +136,23 @@ class CarritoController extends Controller
         return response()->json([
             'mensaje' => 'Carrito vaciado exitosamente'
         ]);
+    }
+
+    public function index()
+    {
+        $user = Auth::user();
+        $carrito = $user->carrito;
+
+        if (!$carrito) {
+            $productos = collect();
+            $total = 0;
+        } else {
+            $productos = $carrito->productos()->get();
+            $total = $carrito->productos()->sum(function ($producto) {
+                return $producto->precio * $producto->pivot->cantidad;
+            });
+        }
+
+        return view('carrito', compact('productos', 'total'));
     }
 }

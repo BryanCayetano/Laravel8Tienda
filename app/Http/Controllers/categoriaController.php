@@ -9,9 +9,19 @@ use Illuminate\Support\Facades\Auth;
 
 class categoriaController extends Controller
 {
+
+    public function index()
+    {
+        // Recuperar todos los productos
+        $categorias = Categoria::all();
+
+        // Retornar vista con los productos
+        return view('layouts.categorias.index', compact('categorias'));
+    }
+
     public function insert(Request $request)
     {
-        if (Auth::user()->rol == 0) {
+        if (Auth::user()->admin == 0) {
             // Si no es administrador, devolvemos una respuesta JSON indicando que no tiene permiso.
             return response()->json([
                 "status" => 0,
@@ -22,7 +32,6 @@ class categoriaController extends Controller
             $request->validate([
                 'nombre' => 'required | unique:categoria',
                 'descripcion' => 'required',
-                'precio' => 'required',
             ]);
 
             // Creamos un objeto Categoria y le asignamos los datos de la nueva categoría.
@@ -40,7 +49,7 @@ class categoriaController extends Controller
 
     public function update(Request $request, $id_categoria)
     {
-        if (Auth::user()->rol == 0) {
+        if (Auth::user()->amin == 0) {
             return response()->json([
                 "status" => 0,
                 "msg" => "No eres admin",
@@ -83,7 +92,7 @@ class categoriaController extends Controller
     public function delete(Request $request)
     {
         // Verificar si el usuario es un administrador
-        if (Auth::user()->rol == 0) {
+        if (Auth::user()->admin == 0) {
             return response()->json([
                 "status" => 0,
                 "msg" => "No eres admin",

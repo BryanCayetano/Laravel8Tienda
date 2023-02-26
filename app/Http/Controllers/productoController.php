@@ -14,15 +14,20 @@ class productoController extends Controller
     {
         // Recuperar todos los productos
         $productos = Producto::all();
+        $categorias = Categoria::all();
 
         // Retornar vista con los productos
-        return view('productos.index', compact('productos'));
+
+        return view('layouts.productos.productos', [
+            'productos' => $productos,
+            'categorias' => $categorias
+        ], compact('productos'));
     }
-    
+
     public function insert(Request $request)
     {
         // Verificar si el usuario es un administrador
-        if (Auth::user()->rol == 0) {
+        if (Auth::user()->admin == 0) {
             return response()->json([
                 "status" => 0,
                 "msg" => "No eres administrador",
@@ -40,12 +45,13 @@ class productoController extends Controller
 
         // Verificar si la categoría existe en la base de datos
         $categoria = Categoria::where('nombre', $request->nombre_categoria)->first();
-        if (!$categoria) {
-            return response()->json([
-                "status" => 0,
-                "msg" => "La categoría no existe",
-            ]);
-        }
+        
+         if (!$categoria) {
+             return response()->json([
+                 "status" => 0,
+                 "msg" => "La categoría no existe",
+             ]);
+         }
 
         // Crear el nuevo producto
         $producto = new Producto();
@@ -53,7 +59,7 @@ class productoController extends Controller
         $producto->descripcion = $request->descripcion;
         $producto->precio = $request->precio;
         $producto->stock = $request->stock;
-        $producto->categoria_id = $categoria->id;
+        $producto->nombre_categoria = $categoria->nombre;
         $producto->save();
 
         return response()->json([
@@ -65,7 +71,7 @@ class productoController extends Controller
     public function update(Request $request, $id)
     {
         // Verificar si el usuario es un administrador
-        if (Auth::user()->rol == 0) {
+        if (Auth::user()->admin == 0) {
             return response()->json([
                 "status" => 0,
                 "msg" => "No eres administrador",
@@ -113,31 +119,11 @@ class productoController extends Controller
         ]);
     }
 
-    public function delete(Request $request)
-    {
-        // Se verifica si el usuario que hace la petición es un administrador.
-        if (Auth::user()->rol == 0) {
-            // Si no es un administrador, se devuelve una respuesta indicando que no tiene permisos suficientes.
-            return response()->json([
-                "status" => 0,
-                "msg" => "No eres admin",
-            ]);
-        } else {
-            // Se crea una instancia del modelo Producto.
-            $producto = new Producto();
+    public function delete(Producto $producto)
+{
+    $producto->delete();
+    //esta función borra el producto y debería redireccionar a la pagina anterior, no obstante el redirect no funciona
+    return redirect()->route('layouts.productos.productos')->with('mensaje', 'El producto ha sido eliminado');
+}
 
-            // Se busca el producto a eliminar en la base de datos a través del ID proporcionado en la petición.
-            if ($producto = Producto::find($request->id)) {
-
-                // Se elimina el producto de la base de datos.
-                $producto->delete();
-
-                // Se devuelve una respuesta indicando que el producto ha sido eliminado correctamente.
-                return response()->json([
-                    "status" => 1,
-                    "msg" => "¡Producto eliminado!",
-                ]);
-            }
-        }
-    }
 }
